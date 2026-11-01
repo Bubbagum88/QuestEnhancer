@@ -1,6 +1,5 @@
 package org.codeberg.anonymous950.questenhancer
 
-import android.util.Log
 import org.codeberg.anonymous950.questenhancer.util.BetterAbstractMutableMap
 import org.codeberg.anonymous950.questenhancer.util.Single
 import java.io.Serializable

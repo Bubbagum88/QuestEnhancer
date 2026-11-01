@@ -1,7 +1,6 @@
 package org.codeberg.anonymous950.questenhancer
 
 import android.content.Context
-import android.util.Log
 import android.view.View
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
@@ -90,13 +89,12 @@ class MainHook : IXposedHookLoadPackage {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val key = param.args[0] as String?
                     if (key == null) {
-                        Log.w(TAG, "null key passed to device config")
+                        XposedBridge.log("null key passed to device config")
                     } else {
                         deviceConfigOverride[key]?.let { override ->
                             val value = override.getType(type)
                             if (value == null) {
-                                Log.w(
-                                    TAG,
+                                XposedBridge.log(
                                     "invalid type for $key: expected ${expectedType.simpleName}, got ${override.type!!.simpleName}"
                                 )
                             } else {
@@ -476,6 +474,23 @@ class MainHook : IXposedHookLoadPackage {
                     }
                 }
             })
+
+        // prevents a crash when battery level is higher than 100% or lower than 0%, this cannot happen normally but I'm fixing it anyway
+        XposedHelpers.findAndHookMethod(
+            "com.oculus.common.status.StatusViewModel",
+            lpparam.classLoader,
+            "getBatteryIcon",
+            Float::class.javaPrimitiveType,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val level = param.args[0] as Float
+                    if (level > 1.0f) {
+                        param.args[0] = 1.0f
+                    } else if (level < 0.0f) {
+                        param.args[0] = 0.0f
+                    }
+                }
+            })
     }
 
     companion object {
@@ -604,8 +619,7 @@ class MainHook : IXposedHookLoadPackage {
             "oculus_shared_core:is_trusted_user" to true, // WARNING!  SENDS IS EMPLOYEE ON TELEMETRY!  also make configurable whether the internal thing shows up on the dock
             "oculus_systemux:oculus_party_per_person_mute" to true,
             "oculus_systemux:oculus_sysux_phone_notifs_iconography" to true, // shows custom icons for phone notifications
-            "arvr_social_identity:simile_follow_request_banner_enabled" to true,
-            "oculus_shared_social:simile_social_blocking_upsell" to false
+            "arvr_social_identity:simile_follow_request_banner_enabled" to true
             // misc
 //            "oculus_social_platform_deviceconfig:oc_ask_to_join" to true,
 //            "oculus_social_platform_deviceconfig:messenger_vr_disable_static_reply" to false,
