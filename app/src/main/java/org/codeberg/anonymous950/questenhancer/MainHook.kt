@@ -6,6 +6,7 @@ import android.view.View
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
+import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 import java.util.function.Function
@@ -437,9 +438,42 @@ class MainHook : IXposedHookLoadPackage {
             lpparam.classLoader,
             "hasFeature",
             String::class.java,
+            XC_MethodReplacement.returnConstant(true)
+        )
+
+        // remove local account restrictions
+        XposedHelpers.findAndHookMethod(
+            "com.oculus.panelapp.anytimeui.bar.apps.BarAppItem",
+            lpparam.classLoader,
+            "getAppRequiresLogin",
+            XC_MethodReplacement.returnConstant(false)
+        )
+        XposedHelpers.findAndHookConstructor(
+            "com.oculus.common.systemuxconfig.SystemUXConfiguration",
+            lpparam.classLoader,
+            $$"com.oculus.common.systemuxconfig.SystemUXConfiguration$Builder",
             object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    param.result = true
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    listOf(
+                        "canDefaultApplicationBeRestarted",
+                        "hasAuiNotificationsTab",
+                        "isBrowserAppTileInLibraryVisible",
+                        "isCaptureSectionVisible",
+                        "isCastingButtonVisible",
+                        "isEnterLocalAccountModeSettingVisible",
+                        "isEventsAppTileInLibraryVisible",
+                        "isExitLocalAccountModeSettingVisible",
+                        "isGuardianUIEnabled",
+                        "isOCMSFetchAppsEnabled",
+//                        "isOnlyDisplayInstalledAppsInLibraryEnabled", // TODO: make this configurable, it removes the annoying thing where you can never remove uninstalled apps from your library
+                        "isPermitMultiUserAccountsUIEnabled",
+                        "isWifiEditable",
+                        "supports3DoFAppsLibrary",
+                        "supportsDogfoodHub",
+                        "supportsFitAndFocus"
+                    ).forEach {
+                        XposedHelpers.setBooleanField(param.thisObject, it, true)
+                    }
                 }
             })
     }

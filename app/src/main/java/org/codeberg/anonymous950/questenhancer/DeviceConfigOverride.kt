@@ -1,5 +1,6 @@
 package org.codeberg.anonymous950.questenhancer
 
+import android.util.Log
 import org.codeberg.anonymous950.questenhancer.util.BetterAbstractMutableMap
 import org.codeberg.anonymous950.questenhancer.util.Single
 import java.io.Serializable
@@ -7,7 +8,7 @@ import kotlin.reflect.KClass
 
 class DeviceConfigOverride : BetterAbstractMutableMap<String, DeviceConfigValue>() {
     companion object {
-        private val TAG = "DeviceConfigOverride"
+        private const val TAG = "DeviceConfigOverride"
     }
 
     private val overriddenValues = mutableMapOf<String, DeviceConfigValue>()
