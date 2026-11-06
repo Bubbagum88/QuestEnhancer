@@ -53,6 +53,7 @@ object HorizonCastHooks {
         hook("cast trace") { hookCastTrace(cl) }
         hook("encoder timing") { HorizonEncoderTiming.install(cl) }
         hook("encoder priority") { HorizonEncoderPriority.install() }
+        hook("encoder bitrate cap") { HorizonEncoderBitrate.install(cl) }
     }
 
     private fun hook(name: String, block: () -> Unit) {
