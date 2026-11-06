@@ -51,6 +51,8 @@ object HorizonCastHooks {
     fun install(cl: ClassLoader) {
         hook("webrtc logging") { hookLibraryLoad(cl) }
         hook("cast trace") { hookCastTrace(cl) }
+        hook("encoder timing") { HorizonEncoderTiming.install(cl) }
+        hook("encoder priority") { HorizonEncoderPriority.install() }
     }
 
     private fun hook(name: String, block: () -> Unit) {
