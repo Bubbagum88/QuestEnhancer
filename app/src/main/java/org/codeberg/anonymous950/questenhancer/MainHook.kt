@@ -14,6 +14,11 @@ import kotlin.reflect.full.companionObjectInstance
 
 class MainHook : IXposedHookLoadPackage {
     override fun handleLoadPackage(lpparam: LoadPackageParam) {
+        // Horizon: casting diagnostics
+        if (lpparam.packageName == "com.oculus.horizon") {
+            HorizonCastHooks.install(lpparam.classLoader)
+            return
+        }
         if (!TARGET_PACKAGES.contains(lpparam.packageName)) {
             return
         }
