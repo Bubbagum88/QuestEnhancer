@@ -18,7 +18,10 @@ import de.robv.android.xposed.XposedHelpers
  * - its parts: makeCurrent, clear (glClear), draw (drawOes), swap (swapBuffers into the
  *   encoder's input surface);
  * - out: dequeueOutputBuffer, collecting encoded frames;
- * - buf: encodeBuffer, if the byte-buffer path is used instead of the texture one.
+ * - buf: encodeBuffer, if the byte-buffer path is used instead of the texture one;
+ * - rate: the bitrate (kbps) and frame rate WebRTC last asked of the encoder, and how
+ *   many times it asked (setRates). This follows WebRTC's bandwidth estimate.
+ * initEncode's size, bitrate and frame rate are logged once per cast.
  */
 object HorizonEncoderTiming {
     private const val TAG = "QECastTiming"
@@ -67,11 +70,34 @@ object HorizonEncoderTiming {
     // timings count only the encoder's own calls.
     private val inEncode = ThreadLocal<Boolean>()
 
+    // Last setRates(kbps, fps) and the number of calls since the last report.
+    private var rateKbps = -1
+    private var rateFps = -1
+    private var rateCalls = 0
+
     fun install(cl: ClassLoader) {
         val encoder = XposedHelpers.findClass(ENCODER, cl)
         timeAll(encoder, "encodeTexture", frame, onlyInEncode = false, isFrame = true)
         timeAll(encoder, "encodeBuffer", buf, onlyInEncode = false)
         timeAll(encoder, "dequeueOutputBuffer", out, onlyInEncode = false)
+        XposedBridge.hookAllMethods(encoder, "setRates", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val kbps = param.args[0] as Int
+                val fps = param.args[1] as Int
+                synchronized(lock) {
+                    rateKbps = kbps; rateFps = fps; rateCalls++
+                }
+            }
+        })
+        XposedBridge.hookAllMethods(encoder, "initEncode", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val a = param.args
+                Log.i(TAG, "initEncode ${a[0]} ${a[1]}x${a[2]} ${a[3]} kbps ${a[4]} fps")
+                synchronized(lock) {
+                    rateKbps = a[3] as Int; rateFps = a[4] as Int; rateCalls = 0
+                }
+            }
+        })
         timeAll(XposedHelpers.findClass(EGL, cl), "makeCurrent", makeCurrent, onlyInEncode = true)
         timeAll(XposedHelpers.findClass(EGL, cl), "swapBuffers", swap, onlyInEncode = true)
         timeAll(XposedHelpers.findClass(DRAWER, cl), "drawOes", draw, onlyInEncode = true)
@@ -112,8 +138,12 @@ object HorizonEncoderTiming {
                     stat.add(now - t0)
                     if (windowStart == 0L) windowStart = now
                     if (now - windowStart >= REPORT_MS * 1_000_000) {
-                        Log.i(TAG, all.joinToString(" | ") { it.text() })
+                        Log.i(
+                            TAG, all.joinToString(" | ") { it.text() } +
+                                " | rate $rateKbps kbps $rateFps fps ($rateCalls calls)"
+                        )
                         all.forEach { it.reset() }
+                        rateCalls = 0
                         windowStart = now
                     }
                 }
