@@ -92,27 +92,43 @@ object HorizonCastHooks {
             })
     }
 
-    // Trace events from the start of a cast to its end.
+    // Trace events from the start of a cast to its end. A Chromecast cast starts with
+    // nativeInitializeForCastingNativeReceiver (width, height); other casts with
+    // nativeInitializeForCastingWithTurnServers (height, width).
     private fun hookCastTrace(cl: ClassLoader) {
         val int = Int::class.javaPrimitiveType
         val str = String::class.java
         val factory = XposedHelpers.findClass(FACTORY, cl)
+
+        fun startTrace(kind: String, width: Any?, height: Any?, fps: Any?, kbps: Any?) {
+            val dir = filesDir ?: return
+            if (!loggingOn || tracing) return
+            val file = File(dir, TRACE_FILE).path
+            tracing = XposedHelpers.callStaticMethod(
+                factory, "startInternalTracingCapture", file
+            ) as Boolean
+            XposedBridge.log(
+                "$TAG: $kind cast ${width}x$height $fps fps $kbps kbps; trace to $file: $tracing"
+            )
+        }
+
+        XposedHelpers.findAndHookMethod(
+            PLATFORM_PLUGIN, cl, "nativeInitializeForCastingNativeReceiver",
+            str, str, str, int, int, int, int,
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val a = param.args
+                    startTrace("Chromecast", a[3], a[4], a[5], a[6])
+                }
+            })
 
         XposedHelpers.findAndHookMethod(
             PLATFORM_PLUGIN, cl, "nativeInitializeForCastingWithTurnServers",
             str, str, str, int, int, int, int,
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    val dir = filesDir ?: return
-                    if (!loggingOn || tracing) return
-                    val file = File(dir, TRACE_FILE).path
-                    tracing = XposedHelpers.callStaticMethod(
-                        factory, "startInternalTracingCapture", file
-                    ) as Boolean
-                    XposedBridge.log(
-                        "$TAG: cast ${param.args[4]}x${param.args[3]} ${param.args[5]} fps " +
-                            "${param.args[6]} kbps; trace to $file: $tracing"
-                    )
+                    val a = param.args
+                    startTrace("TURN", a[4], a[3], a[5], a[6])
                 }
             })
 
