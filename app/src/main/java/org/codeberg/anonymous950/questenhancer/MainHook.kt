@@ -19,6 +19,15 @@ class MainHook : IXposedHookLoadPackage {
             HorizonCastHooks.install(lpparam.classLoader)
             return
         }
+        // vrcast: Chromecast answer bitrate (off unless its properties are set)
+        if (lpparam.packageName == "com.oculus.vrcast") {
+            try {
+                VrCastHooks.install(lpparam.classLoader)
+            } catch (t: Throwable) {
+                XposedBridge.log("QuestEnhancer/Cast: vrcast hook not installed: ${'$'}t")
+            }
+            return
+        }
         if (!TARGET_PACKAGES.contains(lpparam.packageName)) {
             return
         }
