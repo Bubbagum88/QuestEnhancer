@@ -47,7 +47,6 @@ object HorizonCastHooks {
     private var tracing = false
 
     fun install(cl: ClassLoader) {
-        hook("webrtc library name") { hookStockLibraryLoad() }
         hook("webrtc logging") { hookLibraryLoad(cl) }
         hook("cast trace") { hookCastTrace(cl) }
     }
@@ -60,16 +59,28 @@ object HorizonCastHooks {
         }
     }
 
-    // Without this, the first use of PeerConnectionFactory throws UnsatisfiedLinkError.
-    // Its native methods are already there, in liboculus_p2p.so.
-    private fun hookStockLibraryLoad() {
-        XposedHelpers.findAndHookMethod(
-            System::class.java, "loadLibrary", String::class.java,
+    // PeerConnectionFactory's static initializer loads jingle_peerconnection_so, which
+    // Horizon does not have; its native methods are already there, in liboculus_p2p.so.
+    // So that one load is skipped, only while the tracer starts. Runtime.loadLibrary0
+    // (Class, String) is hooked, not System.loadLibrary: System.loadLibrary finds the
+    // library path from its caller's class loader, and a hooked call's caller is the
+    // hook framework, so every library load in Horizon failed.
+    private fun <T> withoutStockLibrary(block: () -> T): T {
+        val unhooks = XposedBridge.hookAllMethods(
+            Runtime::class.java, "loadLibrary0",
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (param.args[0] == STOCK_WEBRTC_LIB) param.result = null
+                    val args = param.args
+                    if (args.size == 2 && args[0] is Class<*> && args[1] == STOCK_WEBRTC_LIB) {
+                        param.result = null
+                    }
                 }
             })
+        try {
+            return block()
+        } finally {
+            unhooks.forEach { it.unhook() }
+        }
     }
 
     // PlatformPluginManager's constructor loads libovrplatformplugin.so, which needs
@@ -91,9 +102,11 @@ object HorizonCastHooks {
                         XposedBridge.log("$TAG: WebRTC logging failed: $t")
                     }
                     try {
-                        XposedHelpers.callStaticMethod(
-                            XposedHelpers.findClass(FACTORY, cl), "initializeInternalTracer"
-                        )
+                        withoutStockLibrary {
+                            XposedHelpers.callStaticMethod(
+                                XposedHelpers.findClass(FACTORY, cl), "initializeInternalTracer"
+                            )
+                        }
                         loggingOn = true
                         XposedBridge.log("$TAG: WebRTC tracer ready")
                     } catch (t: Throwable) {
