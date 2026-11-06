@@ -19,6 +19,12 @@ import java.io.File
  * 2. its trace events during each cast, written when the cast stops to
  *    /data/data/com.oculus.horizon/files/webrtc-cast-trace.json. An "EncoderPaused"
  *    event there means the encoder pause is what drops the frames.
+ *
+ * The tracer is in org.webrtc.PeerConnectionFactory, whose static initializer loads
+ * libjingle_peerconnection_so.so. Horizon has no such file (its WebRTC is
+ * liboculus_p2p.so); the quest1_horizon_webrtc_lib Magisk module adds it as a link to
+ * liboculus_p2p.so. Without that module the tracer reports a failure and the
+ * logging still works.
  */
 object HorizonCastHooks {
     private const val TAG = "QuestEnhancer/Cast"
@@ -26,10 +32,6 @@ object HorizonCastHooks {
     private const val LOGGING = "org.webrtc.Logging"
     private const val FACTORY = "org.webrtc.PeerConnectionFactory"
     private const val TRACE_FILE = "webrtc-cast-trace.json"
-
-    // org.webrtc.PeerConnectionFactory's static initializer loads this library, which
-    // Horizon does not have: its WebRTC is in liboculus_p2p.so.
-    private const val STOCK_WEBRTC_LIB = "jingle_peerconnection_so"
 
     // webrtc::TraceLevel: state info, warning, error, critical, debug, info.
     private const val TRACE_LEVELS = 0x0001 or 0x0002 or 0x0004 or 0x0008 or 0x0800 or 0x1000
@@ -59,30 +61,6 @@ object HorizonCastHooks {
         }
     }
 
-    // PeerConnectionFactory's static initializer loads jingle_peerconnection_so, which
-    // Horizon does not have; its native methods are already there, in liboculus_p2p.so.
-    // So that one load is skipped, only while the tracer starts. Runtime.loadLibrary0
-    // (Class, String) is hooked, not System.loadLibrary: System.loadLibrary finds the
-    // library path from its caller's class loader, and a hooked call's caller is the
-    // hook framework, so every library load in Horizon failed.
-    private fun <T> withoutStockLibrary(block: () -> T): T {
-        val unhooks = XposedBridge.hookAllMethods(
-            Runtime::class.java, "loadLibrary0",
-            object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    val args = param.args
-                    if (args.size == 2 && args[0] is Class<*> && args[1] == STOCK_WEBRTC_LIB) {
-                        param.result = null
-                    }
-                }
-            })
-        try {
-            return block()
-        } finally {
-            unhooks.forEach { it.unhook() }
-        }
-    }
-
     // PlatformPluginManager's constructor loads libovrplatformplugin.so, which needs
     // liboculus_p2p.so; WebRTC's JNI methods work from then on.
     private fun hookLibraryLoad(cl: ClassLoader) {
@@ -102,11 +80,9 @@ object HorizonCastHooks {
                         XposedBridge.log("$TAG: WebRTC logging failed: $t")
                     }
                     try {
-                        withoutStockLibrary {
-                            XposedHelpers.callStaticMethod(
-                                XposedHelpers.findClass(FACTORY, cl), "initializeInternalTracer"
-                            )
-                        }
+                        XposedHelpers.callStaticMethod(
+                            XposedHelpers.findClass(FACTORY, cl), "initializeInternalTracer"
+                        )
                         loggingOn = true
                         XposedBridge.log("$TAG: WebRTC tracer ready")
                     } catch (t: Throwable) {
