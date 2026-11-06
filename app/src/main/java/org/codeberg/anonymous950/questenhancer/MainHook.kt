@@ -38,6 +38,15 @@ class MainHook : IXposedHookLoadPackage {
             }
             return
         }
+        // OCMS: keep Meta's app auto-updates off
+        if (lpparam.packageName == "com.oculus.ocms") {
+            try {
+                OcmsUpdateHooks.install(lpparam.classLoader)
+            } catch (t: Throwable) {
+                XposedBridge.log("QuestEnhancer/OcmsUpdates: hook not installed: ${'$'}t")
+            }
+            return
+        }
         if (!TARGET_PACKAGES.contains(lpparam.packageName)) {
             return
         }

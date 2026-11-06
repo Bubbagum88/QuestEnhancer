@@ -5,5 +5,6 @@
         <item>com.oculus.systemux</item>
         <item>com.oculus.horizon</item>
         <item>com.oculus.vrcast</item>
+        <item>com.oculus.ocms</item>
     </string-array>
 </resources>
