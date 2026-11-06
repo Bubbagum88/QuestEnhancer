@@ -44,6 +44,16 @@ object DockLibraryHooks {
     @Volatile
     private var accountless = false
 
+    @Volatile
+    private var loggedState = false
+
+    /** Is a Meta account on the headset? (`dumpsys account` shows it as type com.oculus.) */
+    private fun hasMetaAccount(context: Context): String = try {
+        android.accounts.AccountManager.get(context).getAccountsByType("com.oculus").isNotEmpty().toString()
+    } catch (t: Throwable) {
+        "unknown ($t)"
+    }
+
     fun install(cl: ClassLoader) {
         hook("pin cap") { hookPinCap(cl) }
         hook("default pins") { hookDefaultPins(cl) }
@@ -134,6 +144,11 @@ object DockLibraryHooks {
             override fun afterHookedMethod(param: MethodHookParam) {
                 val ocms = param.result as Array<*>?
                 val empty = ocms == null || ocms.isEmpty()
+                if (empty != accountless || !loggedState) {
+                    loggedState = true
+                    val context = XposedHelpers.getObjectField(param.thisObject, "mContext") as Context
+                    XposedBridge.log("$TAG: Meta account (com.oculus): ${hasMetaAccount(context)}, Meta app list: ${ocms?.size ?: 0} apps, local-apps fallback: ${if (empty) "on" else "off"}")
+                }
                 accountless = empty
                 if (rawOcms.get() == true) {
                     lastOcmsEmpty.set(empty)
