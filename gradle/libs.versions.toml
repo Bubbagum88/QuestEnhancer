@@ -1,0 +1,8 @@
+[versions]
+# The Kotlin that AGP's built-in Kotlin compiles with (build.gradle.kts: 2.4.20).
+kotlin = "2.4.20"
+xposed = "82"
+
+[libraries]
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+xposed = { module = "de.robv.android.xposed:api", version.ref = "xposed" }
