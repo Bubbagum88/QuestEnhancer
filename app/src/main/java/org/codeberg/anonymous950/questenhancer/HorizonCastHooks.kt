@@ -22,8 +22,8 @@ import java.io.File
  *
  * The tracer is in org.webrtc.PeerConnectionFactory, whose static initializer loads
  * libjingle_peerconnection_so.so. Horizon has no such file (its WebRTC is
- * liboculus_p2p.so); the quest1_horizon_webrtc_lib Magisk module adds it as a link to
- * liboculus_p2p.so. Without that module the tracer reports a failure and the
+ * liboculus_p2p.so, loaded from inside Horizon.apk); the quest1_horizon_webrtc_lib
+ * Magisk module adds an empty one. Without that module the tracer reports a failure and the
  * logging still works.
  */
 object HorizonCastHooks {
