@@ -3,6 +3,8 @@
 **QuestEnhancer itself was made by Anonymous950** (GitHub
 [Anonymous941](https://github.com/Anonymous941/QuestEnhancer)). This repo is a fork of it,
 and they're a contributor here: their commits are kept in its history.
+They gave this fork their blessing, name included, in the Monterey Club Discord
+on 2026-11-21, and send their changes here as pull requests.
 
 QuestEnhancer stands on two communities: FreeXR, whose tools unlock and root a
 Quest 1 in the first place, and the Monterey Club, whose methods fill the Manager.
