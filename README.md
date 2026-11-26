@@ -110,9 +110,10 @@ build tools; Gradle downloads missing SDK parts if the licences are accepted:
     ./gradlew assembleRelease          # Windows: gradlew.bat assembleRelease
 
 The APK is `app/build/outputs/apk/release/app-release.apk`. It is signed
-with the fixed key in `app/` (`questenhancer-debug.keystore`), not the key
-the Releases are signed with, so uninstall a release build before installing
-your own (and the other way round), then enable it in Vector again.
+with the fixed key in `app/` (`questenhancer-debug.keystore`), the same key
+as the Releases and CI builds, so your build installs over a release and the
+other way round. The key is public on purpose so anyone can build updates;
+only install QuestEnhancer APKs from this repository or that you built yourself.
 Android Studio works too: open the folder and build the `app` module.
 
 ## Credits
