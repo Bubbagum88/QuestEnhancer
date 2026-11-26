@@ -18,8 +18,31 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Sign with the release key when the repository has it (secrets aren't given to
+      # pull requests from forks; those builds use the fixed key in app/).
+      - name: Release key
+        env:
+          KEYSTORE_B64: ${{ secrets.QE_RELEASE_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "QE_RELEASE_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "Signing with the release key"
+          else
+            echo "No release key secret: signing with the fixed key in app/"
+          fi
+
       - name: Build
+        env:
+          QE_RELEASE_STORE_PASSWORD: ${{ secrets.QE_RELEASE_STORE_PASSWORD }}
+          QE_RELEASE_KEY_ALIAS: ${{ secrets.QE_RELEASE_KEY_ALIAS }}
+          QE_RELEASE_KEY_PASSWORD: ${{ secrets.QE_RELEASE_KEY_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease -PciRun=${{ github.run_number }}
+
+      - name: Signing certificate
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk | grep -E 'SHA-256|DN'
 
       # QuestEnhancer-v<version>-r<run>-<short commit>[-<branch>].apk; main has no
       # branch suffix. The artifact has the same name.

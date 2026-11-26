@@ -95,7 +95,25 @@ Each fix has its own folder with:
 
 GitHub Actions builds the QuestEnhancer APK, the devoptions app, the cast
 shim, and packs every Magisk module under `fixes/*/module` into a zip on each
-push (Actions tab).
+push (Actions tab). Releases are built the same way from `main`.
+
+### Build it yourself
+
+You need git and JDK 21 (for example Temurin 21). The Gradle wrapper fetches
+Gradle itself; the Android SDK is needed too, either through Android Studio
+or the command-line tools with `ANDROID_HOME` set (SDK Platform 37 and its
+build tools; Gradle downloads missing SDK parts if the licences are accepted:
+`sdkmanager --licenses`).
+
+    git clone https://github.com/Bubbagum88/QuestEnhancer
+    cd QuestEnhancer
+    ./gradlew assembleRelease          # Windows: gradlew.bat assembleRelease
+
+The APK is `app/build/outputs/apk/release/app-release.apk`. It is signed
+with the fixed key in `app/` (`questenhancer-debug.keystore`), not the key
+the Releases are signed with, so uninstall a release build before installing
+your own (and the other way round), then enable it in Vector again.
+Android Studio works too: open the folder and build the `app` module.
 
 ## Credits
 

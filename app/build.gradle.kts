@@ -89,9 +89,21 @@ android {
         }
     }
 
+    // Release key: CI decodes the QE_RELEASE_KEYSTORE_B64 secret to a file and sets
+    // these variables. Without them (a fork, or a build at home) the fixed key above is used.
+    val releaseStore = System.getenv("QE_RELEASE_KEYSTORE")?.let { file(it) }?.takeIf { it.isFile }
+    if (releaseStore != null) {
+        signingConfigs.create("release") {
+            storeFile = releaseStore
+            storePassword = System.getenv("QE_RELEASE_STORE_PASSWORD")
+            keyAlias = System.getenv("QE_RELEASE_KEY_ALIAS")
+            keyPassword = System.getenv("QE_RELEASE_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (releaseStore != null) "release" else "debug")
             isMinifyEnabled = false
             isShrinkResources = false
         }
