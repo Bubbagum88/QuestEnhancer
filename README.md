@@ -17,6 +17,46 @@ Magisk). It holds two things:
 Decompiled Meta apps and research notes are kept separately (not public,
 since the decompiled code is Meta's).
 
+## Install QuestEnhancer
+
+You need a rooted Quest 1 on v50 with Magisk. Download the APK from
+[Releases](https://github.com/Bubbagum88/QuestEnhancer/releases) and the latest
+Vector zip from [JingMatrix/Vector releases](https://github.com/JingMatrix/Vector/releases).
+
+1. **Turn on Zygisk.** Open Magisk (Library > Unknown Sources), tap the gear,
+   turn on Zygisk, and restart the headset.
+2. **Install Vector.** Copy the Vector zip to the headset (SideQuest's file
+   manager or `adb push`). In Magisk, open Modules > Install from storage,
+   pick the zip, then restart the headset.
+3. **Install QuestEnhancer.** Sideload the APK like any other app (SideQuest or
+   `adb install`). If you had another QuestEnhancer build installed, uninstall
+   it first: builds signed with a different key won't install over each other.
+4. **Enable it in Vector.** Open Vector (Unknown Sources), go to Modules and tap
+   QuestEnhancer. Turn it on with the switch at the top right. Then tap the
+   checklist icon in the search bar (the leftmost of its three icons) and
+   choose what the module asks for, and apply. Check that
+   **Meta Quest Settings, SystemUX** and the other apps it lists really are
+   ticked: Vector's filter sometimes shows every app instead, and then nothing
+   is selected and the features don't appear.
+5. **Give it root.** Open QuestEnhancer once. If Magisk's popup doesn't appear
+   or the app says root was refused, open Magisk > Superuser and turn
+   Quest Enhancer on (if it isn't listed, tap Add and pick it), then tap
+   Refresh in QuestEnhancer.
+6. **Restart the headset** (or `adb shell am force-stop com.oculus.systemux`).
+   Hooks only load into apps started after the module was enabled.
+
+Most of what the hooks unlock shows up in Quest's own Settings (Experimental,
+Hand tracking, Developer); the QuestEnhancer app is the Manager for everything
+else. To pin an Unknown Sources app to the dock, use the three dots on its tile.
+
+**Known problems**
+
+- UX Patcher (Lumince) hooks the same apps and stops QuestEnhancer working.
+  Use one or the other.
+- Something missing? Open Vector > Logs and look for
+  `org.codeberg.anonymous950.questenhancer`. "Loading legacy module" there is
+  normal (it is a classic Xposed module); an error after it is not.
+
 ## Fixes
 
 Each fix has its own folder with:
