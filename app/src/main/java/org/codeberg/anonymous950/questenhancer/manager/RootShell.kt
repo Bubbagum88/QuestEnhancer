@@ -16,6 +16,10 @@ object RootShell {
     private var output: BufferedReader? = null
     private var refused = false
 
+    /** True once su was refused or died, until [retry]. */
+    val isRefused: Boolean
+        @Synchronized get() = refused
+
     @Synchronized
     fun retry() {
         refused = false
