@@ -109,6 +109,7 @@ class ManagerActivity : Activity() {
         content.addView(label(
             if (loading) "Reading from the headset..." else "What is set on this headset now.",
             13f, dim).apply { setPadding(0, 0, 0, dp(16)) })
+        if (!loading && RootShell.isRefused) content.addView(noRootRow())
         if (rebootNeeded) content.addView(rebootRow())
         if (systemUxRestartNeeded) content.addView(restartSystemUxRow())
         for (t in tweaks.filter { it.area == area }) content.addView(row(t))
@@ -432,6 +433,34 @@ class ManagerActivity : Activity() {
                 systemUxRestartNeeded = false
                 drawContent()
                 Thread { RootShell.run("am force-stop com.oculus.systemux") }.start()
+            }
+        })
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = dp(12)
+        }
+    }
+
+    /**
+     * Root was refused. Magisk's grant popup is easy to miss in the headset (it times out
+     * and denies), and asking again gets the same answer, so say how to grant it by hand.
+     */
+    private fun noRootRow() = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(20), dp(14), dp(20), dp(14))
+        background = rounded(selected)
+        addView(label("Quest Enhancer has no root access, so it can't read or change anything. " +
+            "Open Magisk, go to Superuser and turn Quest Enhancer on (if it isn't listed, tap Add " +
+            "and pick it). Then come back and tap Refresh.", 15f, Color.WHITE),
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        addView(label("Open Magisk", 15f, Color.WHITE, bold = true).apply {
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            background = rounded(accent)
+            setOnClickListener {
+                val open = packageManager.getLaunchIntentForPackage("com.topjohnwu.magisk")
+                if (open != null) startActivity(open)
+                else Toast.makeText(this@ManagerActivity,
+                    "Magisk not found by its usual name. Open it from Unknown Sources.", Toast.LENGTH_LONG).show()
             }
         })
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
