@@ -40,6 +40,17 @@ import java.util.concurrent.TimeUnit
  *
  * 6. One missed heartbeat ended the cast. Fix: allow 3, as Meta's own gatekeeper does.
  *
+ * 7. vrcast crashed on the next stop path after a stop. The TV answers our STOP by closing the
+ *    session (CastV2 CLOSE, which the protocol lets either side send at any time);
+ *    AnonymousClass2.onRemoteClose then calls disconnect() again, after the first disconnect
+ *    already cleared mGoogleCastMWSBridge, and disconnect() dereferences it: NullPointerException
+ *    (GoogleCastMWSBridge.getDeviceAddress() at GoogleCastConnectionHelper.java:187), vrcast
+ *    dies, and the next cast stalls at "connecting" (seen 2026-11-27). The failure handler and
+ *    the heartbeat end a cast through the same disconnect(), so a TV that drops the socket
+ *    with no CLOSE reaches it too.
+ *    Fix: disconnect() with no current cast does nothing. Each disconnect, remote close and
+ *    failure is logged with the path it came from, for reports from other TVs.
+ *
  * On by default; su -c setprop debug.qe.cast_teardown 0 turns all of it off (read per call).
  */
 object CastTeardownHooks {
@@ -113,6 +124,7 @@ object CastTeardownHooks {
         // 2a. A leftover bridge at start: tear it down properly first.
         val connect = XposedBridge.hookAllMethods(helper, "connect", object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
+                log("connect: ${param.args.joinToString { "$it" }}")
                 if (!enabled()) return
                 val h = param.thisObject
                 val old = XposedHelpers.getObjectField(h, "mGoogleCastMWSBridge") ?: return
@@ -162,11 +174,35 @@ object CastTeardownHooks {
             }
         })
 
+        // 7. disconnect() with no current cast (already stopped) would crash: skip it.
+        val disconnect = XposedBridge.hookAllMethods(helper, "disconnect", object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val current = XposedHelpers.getObjectField(param.thisObject, "mGoogleCastMWSBridge")
+                val from = Thread.currentThread().stackTrace.drop(2).take(30)
+                    .firstOrNull { it.className.startsWith("com.oculus.vrcast") && !it.methodName.startsWith("disconnect") }
+                    ?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: "?"
+                if (current == null && enabled()) {
+                    log("disconnect from $from: cast already stopped, skipped (vrcast would crash here)")
+                    param.result = null
+                } else {
+                    log("disconnect from $from: ${if (current == null) "no current cast" else "closing the current cast"}")
+                }
+            }
+        })
+        val remoteClose = XposedHelpers.findClassIfExists("$HELPER\$2", cl)?.let { anon ->
+            XposedBridge.hookAllMethods(anon, "onRemoteClose", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    log("TV closed the session (CLOSE)${param.args.joinToString(prefix = " ", separator = ", ") { "$it" }.trimEnd()}")
+                }
+            })
+        }
+
         // 3. Late failure handler: only act on the bridge that failed if it is still current.
         val onFailure = XposedHelpers.findClassIfExists("$HELPER\$2", cl)?.let { anon ->
             XposedBridge.hookAllMethods(anon, "lambda\$onFailure\$0\$GoogleCastConnectionHelper\$2",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
+                        log("failure handler: ${param.args.joinToString { "$it" }}")
                         if (!enabled()) return
                         val h = XposedHelpers.getObjectField(param.thisObject, "this\$0")
                         val current = XposedHelpers.getObjectField(h, "mGoogleCastMWSBridge")
@@ -230,7 +266,8 @@ object CastTeardownHooks {
 
         log("vrcast hooks: launchParse=${launchParse.size} ctor=${ctor.size} close=${close.size} " +
             "connect=${connect.size} launch=${launch.size} onFailure=${onFailure?.size ?: 0} " +
-            "horizonWatch=${register?.size ?: 0} ping=${ping.size}")
+            "horizonWatch=${register?.size ?: 0} ping=${ping.size} disconnect=${disconnect.size} " +
+            "remoteClose=${remoteClose?.size ?: 0}")
     }
 
     /** Send receiver STOP for [sid]; wait for the TV's reply unless on the reply thread. */
