@@ -38,7 +38,9 @@ Vector zip from [JingMatrix/Vector releases](https://github.com/JingMatrix/Vecto
    **Meta Quest Settings, SystemUX** and the other apps it lists really are
    ticked: Vector's filter sometimes shows every app instead, and then nothing
    is selected and the features don't appear.
-5. **Give it root.** Open QuestEnhancer once. If Magisk's popup doesn't appear
+5. **Give it root.** Open QuestEnhancer once. In Magisk's popup, set the time to
+   **Forever** before Grant: a grant for Once is not saved, so the app loses root
+   at every restart. If Magisk's popup doesn't appear
    or the app says root was refused, open Magisk > Superuser and turn
    Quest Enhancer on (if it isn't listed, tap Add and pick it), then tap
    Refresh in QuestEnhancer.

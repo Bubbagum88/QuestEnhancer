@@ -687,8 +687,9 @@ class ManagerActivity : Activity() {
         setPadding(dp(20), dp(14), dp(20), dp(14))
         background = rounded(selected)
         addView(label("Quest Enhancer has no root access, so it can't read or change anything. " +
-            "Open Magisk, go to Superuser and turn Quest Enhancer on (if it isn't listed, tap Add " +
-            "and pick it). Then come back and tap Refresh.", 15f, Color.WHITE),
+            "Tap Refresh, and when Magisk asks, set its time to Forever before Grant: a grant for " +
+            "Once ends at the next restart. Or open Magisk, go to Superuser and turn Quest Enhancer " +
+            "on (if it isn't listed, tap Add and pick it), then tap Refresh.", 15f, Color.WHITE),
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         addView(label("Open Magisk", 15f, Color.WHITE, bold = true).apply {
             setPadding(dp(16), dp(8), dp(16), dp(8))
