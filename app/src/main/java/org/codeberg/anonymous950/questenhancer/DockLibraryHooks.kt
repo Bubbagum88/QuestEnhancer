@@ -11,7 +11,8 @@ import de.robv.android.xposed.XposedHelpers
  * Dock and Library tweaks, after LucentW's systemux-accountless (Quest 1, v50),
  * done as hooks instead of a patched SystemUX.apk:
  *
- * 1. Up to [MAX_PINNED] pinned apps on the dock instead of Meta's hard-coded 5.
+ * 1. Up to [maxPinned] pinned apps on the dock (5 to 10, the Manager's "Dock pins"
+ *    slider) instead of Meta's hard-coded 5.
  * 2. No default apps (Messenger, Share) put on an empty dock.
  * 3. Library without a Meta account: when Meta's app service (OCMS) knows no apps,
  *    the locally installed apps are listed instead, with their own icons. With an
@@ -20,7 +21,11 @@ import de.robv.android.xposed.XposedHelpers
  */
 object DockLibraryHooks {
     private const val TAG = "QuestEnhancer/Dock"
-    private const val MAX_PINNED = 10
+    const val STOCK_PINNED = 5
+    const val MOST_PINNED = 10
+
+    @Volatile
+    private var maxPinned = MOST_PINNED
     private const val PINNED_PREF_KEY = "aui_bar_apps_pinned"
 
     private const val DYNAMIC_APPS_VM = "com.oculus.panelapp.anytimeui.bar.apps.DynamicAppsViewModel"
@@ -54,7 +59,8 @@ object DockLibraryHooks {
         "unknown ($t)"
     }
 
-    fun install(cl: ClassLoader) {
+    fun install(cl: ClassLoader, pins: Int = MOST_PINNED) {
+        maxPinned = pins.coerceIn(STOCK_PINNED, MOST_PINNED)
         hook("pin cap") { hookPinCap(cl) }
         hook("default pins") { hookDefaultPins(cl) }
         hook("accountless library") { hookAccountlessLibrary(cl) }
@@ -84,13 +90,30 @@ object DockLibraryHooks {
             }
         })
 
+        // At SystemUX start the saved pins are read in full (stock caps only when saving).
+        // Over the cap (the Dock pins slider was lowered): keep the first ones that fit,
+        // unpin the rest, and save the shorter list.
+        XposedHelpers.findAndHookMethod(vmClass, "initializePinnedApps", object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                @Suppress("UNCHECKED_CAST")
+                val pinned = XposedHelpers.callMethod(param.thisObject, "getPinnedApps") as LinkedHashMap<String, Any?>
+                if (pinned.size <= maxPinned) return
+                val kept = LinkedHashMap<String, Any?>()
+                for ((pkg, item) in pinned) if (kept.size < maxPinned) kept[pkg] = item
+                XposedHelpers.callMethod(param.thisObject, "setPinnedApps", kept)
+                XposedHelpers.callMethod(param.thisObject, "writeAppListPrefValue",
+                    ArrayList(kept.keys), PINNED_PREF_KEY, maxPinned)
+                XposedBridge.log("$TAG: ${pinned.size} pins over the cap of $maxPinned, unpinned ${pinned.keys - kept.keys}")
+            }
+        })
+
         // The saved list is cut to the cap passed here (5).
         XposedHelpers.findAndHookMethod(
             vmClass, "writeAppListPrefValue",
             java.util.List::class.java, String::class.java, Int::class.javaPrimitiveType,
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
-                    if (param.args[1] == PINNED_PREF_KEY) param.args[2] = MAX_PINNED
+                    if (param.args[1] == PINNED_PREF_KEY) param.args[2] = maxPinned
                 }
             })
 
@@ -104,7 +127,7 @@ object DockLibraryHooks {
                     val vm = XposedHelpers.getObjectField(param.thisObject, "this$0")
                     val pinned = XposedHelpers.callMethod(vm, "getPinnedApps") as Map<*, *>
                     val pkg = param.args[0] as String
-                    if (param.args[1] as Boolean && pinned.size < MAX_PINNED) {
+                    if (param.args[1] as Boolean && pinned.size < maxPinned) {
                         XposedHelpers.callMethod(vm, "addPinnedApp", pkg)
                     } else {
                         XposedHelpers.callMethod(vm, "removePinnedApp", pkg)
@@ -120,7 +143,7 @@ object DockLibraryHooks {
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     if (param.args[1] as Boolean && dockViewModel != null) {
-                        param.args[2] = pinnedCount() >= MAX_PINNED
+                        param.args[2] = pinnedCount() >= maxPinned
                     }
                 }
             })

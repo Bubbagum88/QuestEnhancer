@@ -49,6 +49,28 @@ Most of what the hooks unlock shows up in Quest's own Settings (Experimental,
 Hand tracking, Developer); the QuestEnhancer app is the Manager for everything
 else. To pin an Unknown Sources app to the dock, use the three dots on its tile.
 
+**Uninstalling**
+
+Our hooks let the dock hold up to 10 pins (no Store/Explore) and keep
+sideloaded apps pinned, and SystemUX saves that pin list. Stock SystemUX reads
+the whole saved list back and adds Store and Explore, so after an uninstall
+the dock can overflow. So, in order:
+
+1. In QuestEnhancer > QuestEnhancer, tap **Remove everything**. It removes the
+   modules the Manager installed and its settings, puts the dock back to 5
+   pins (the first 5 stay; SystemUX restarts), and asks before undoing OS
+   update blocking, Chats or the adb port (left as they are by default).
+2. In Vector > Modules, turn QuestEnhancer off, then restart the headset.
+3. Check the dock and apps menu open, then uninstall QuestEnhancer.
+
+If you uninstall without step 1, the cleanup module
+([15-qe-cleanup](fixes/15-qe-cleanup)) removes those modules and settings at
+the next boot instead. It can't shorten the dock (that needs the hooks).
+
+If the apps menu already won't open after an uninstall, installing
+QuestEnhancer again and enabling it in Vector should bring the hooks back,
+then do the steps above. (Not tested yet; a factory reset is the known fix.)
+
 **Known problems**
 
 - UX Patcher (Lumince) hooks the same apps and stops QuestEnhancer working.
@@ -84,6 +106,7 @@ Each fix has its own folder with:
 | [12-backlight](fixes/12-backlight) | Holds the display brightness at a chosen value while the display is on | Our own, after a Discord tip; PC-tested, not yet on headset |
 | [13-wired-steamlink](fixes/13-wired-steamlink) | Steam Link over the USB cable (USB networking), with the patched Steam Link | misteranderson91's q1_steamlink_usb (MIT), unchanged; not yet on headset |
 | [14-skip-setup](fixes/14-skip-setup) | Skips first-time setup on a freshly reset rooted headset (script) | Juspertinry's method; not yet tested by us |
+| [15-qe-cleanup](fixes/15-qe-cleanup) | If QuestEnhancer is uninstalled, removes the modules its Manager installed and its settings at the next boot | Our own; tested on a PC with fake folders, not yet on headset |
 
 ## Apps
 

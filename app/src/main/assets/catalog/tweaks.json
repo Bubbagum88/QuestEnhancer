@@ -1244,12 +1244,38 @@
           "preferenceDefault": false
         },
         {
+          "type": "slider",
+          "label": "Dock pins",
+          "hint": "How many apps the dock holds (Meta's is 5). Takes effect after Restart SystemUX. Lower it and the dock keeps the first ones that fit and unpins the rest.",
+          "preference": "dock_max_pins",
+          "min": 5,
+          "max": 10,
+          "valueDefault": 10
+        },
+        {
           "type": "switch",
           "label": "Show debug bar in the dock",
           "preference": "enable_dock_debug_bar",
           "preferenceDefault": true
+        },
+        {
+          "type": "header",
+          "label": "Before you uninstall QuestEnhancer",
+          "hint": "Stock SystemUX holds 5 pins and drops sideloaded apps from the dock; a dock saved with more can stop the dock and apps menu opening once the hooks are gone. Tap Remove everything below (it also puts the dock back to 5 pins), then turn the module off in Vector, restart, and uninstall."
         }
       ]
+    },
+    {
+      "id": "qe-cleanup",
+      "name": "Cleanup if QuestEnhancer is uninstalled",
+      "area": "QuestEnhancer",
+      "summary": "Android runs nothing of an app when it is uninstalled, so this small module does the cleanup: at boot, if QuestEnhancer is gone, it removes the modules listed here and QuestEnhancer's settings, then itself. It is installed with the first module the Manager installs. OS update blocking, Chats and the adb port are left alone.",
+      "author": "Bubbagum88",
+      "url": "https://github.com/Bubbagum88/QuestEnhancer/tree/main/fixes/15-qe-cleanup",
+      "licence": "GPL-3.0",
+      "risk": "safe",
+      "bundle": "15-qe-cleanup",
+      "check": "f=/data/adb/questenhancer/installed; if [ -s $f ]; then echo \"Watching: $(tr '\\n' ' ' < $f)\"; else echo 'Nothing installed by the Manager yet'; fi"
     }
   ]
 }

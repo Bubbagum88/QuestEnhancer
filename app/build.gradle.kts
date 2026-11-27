@@ -15,6 +15,7 @@ val bundledFixes = listOf(
     "11-charging-sound",
     "12-backlight",
     "13-wired-steamlink",
+    "15-qe-cleanup",
 )
 
 /** Zips each bundled fix's module/ into assets/modules/<fix>.zip, plus index.json (id, version, versionCode). */
