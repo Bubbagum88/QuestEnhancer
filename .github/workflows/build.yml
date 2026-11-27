@@ -18,6 +18,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The APK carries fix 07's module, whose .so files are built here first.
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r26b
+      - name: Build cast feedback shim into its module
+        run: sh fixes/07-cast-feedback-shim/build-shim.sh "${{ steps.ndk.outputs.ndk-path }}"
+
       # Sign with the release key when the repository has it (secrets aren't given to
       # pull requests from forks; those builds use the fixed key in app/).
       - name: Release key
@@ -86,28 +95,8 @@ jobs:
         id: ndk
         with:
           ndk-version: r26b           # = 26.1.10909125
-      - name: Vendor xHook (iqiyi/xHook v1.2.0, MIT)
-        run: |
-          git clone --depth 1 --branch v1.2.0 https://github.com/iqiyi/xHook /tmp/xhook
-          dst=fixes/07-cast-feedback-shim/jni/xhook
-          mkdir -p "$dst"
-          cp /tmp/xhook/libxhook/jni/*.c /tmp/xhook/libxhook/jni/*.h "$dst"/
-          cp /tmp/xhook/LICENSE "$dst"/LICENSE
-      - name: Build cast feedback shim (ndk-build)
-        working-directory: fixes/07-cast-feedback-shim
-        run: |
-          "${{ steps.ndk.outputs.ndk-path }}/ndk-build" \
-            NDK_PROJECT_PATH=. \
-            APP_BUILD_SCRIPT=jni/Android.mk \
-            NDK_APPLICATION_MK=jni/Application.mk
-      - name: Place shim .so into the module
-        run: |
-          base=fixes/07-cast-feedback-shim
-          rm -f "$base/module/zygisk/.gitkeep"
-          mkdir -p "$base/module/zygisk"
-          cp "$base/libs/arm64-v8a/libqecastshim.so"   "$base/module/zygisk/arm64-v8a.so"
-          cp "$base/libs/armeabi-v7a/libqecastshim.so" "$base/module/zygisk/armeabi-v7a.so"
-          ls -l "$base/module/zygisk"
+      - name: Build cast feedback shim into its module
+        run: sh fixes/07-cast-feedback-shim/build-shim.sh "${{ steps.ndk.outputs.ndk-path }}"
       - name: Short commit
         id: short
         run: echo "sha=$(echo '${{ github.event.pull_request.head.sha || github.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"

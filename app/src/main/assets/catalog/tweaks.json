@@ -839,6 +839,7 @@
     },
     {
       "id": "cast-shim",
+      "bundle": "07-cast-feedback-shim",
       "module": "quest1_cast_feedback_shim",
       "name": "Cast fix for dual-network TVs",
       "area": "Casting",

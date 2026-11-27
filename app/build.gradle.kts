@@ -7,9 +7,12 @@ plugins {
 
 // Magisk modules the Manager installs itself. Only fixes whose code we may ship:
 // our own, or MIT with its LICENSE inside the module. Left out: 05 (needs your own
-// logos), 07 (its .so is built by CI's fixes job, not here).
-val bundledFixes = listOf(
+// logos). 07 only once its .so files are built (build-shim.sh, as CI does first);
+// a local build without them leaves it out rather than ship an empty module.
+val castShimBuilt = rootProject.file("fixes/07-cast-feedback-shim/module/zygisk/arm64-v8a.so").isFile
+val bundledFixes = listOfNotNull(
     "03-devsettings-selinux",
+    "07-cast-feedback-shim".takeIf { castShimBuilt },
     "09-status-led",
     "10-passthrough-tint",
     "11-charging-sound",
