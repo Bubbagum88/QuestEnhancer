@@ -27,6 +27,8 @@ data class Tweak(
     val after: String = "",
     /** A fix folder whose module the APK carries (assets/modules/<bundle>.zip): Install/Update buttons. */
     val bundle: String = "",
+    /** Magisk module id of a tweak that is a module the APK doesn't carry: On/off and Uninstall only. */
+    val module: String = "",
 )
 
 /** A module the APK carries, from assets/modules/index.json (written by the bundleModules task). */
@@ -79,6 +81,7 @@ object Catalog {
                 install = o.optString("install", ""),
                 after = o.optString("after", ""),
                 bundle = o.optString("bundle", ""),
+                module = o.optString("module", ""),
             )
         }
     }

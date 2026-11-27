@@ -839,6 +839,7 @@
     },
     {
       "id": "cast-shim",
+      "module": "quest1_cast_feedback_shim",
       "name": "Cast fix for dual-network TVs",
       "area": "Casting",
       "summary": "Fix 07: a TV with Ethernet and Wi-Fi both up sends its feedback from its other address, and Horizon's old WebRTC drops it (slow, laggy casts). The shim lets that feedback through. Not yet proven to fix it.",
@@ -1030,14 +1031,6 @@
       "install": "Not installed: flash 13-wired-steamlink-rN.zip in Magisk, then restart. You also need Steam Link patched for the Quest 1.",
       "controls": [
         {
-          "type": "switch",
-          "label": "USB networking on",
-          "state": "^module=on$",
-          "on": "rm -f /data/adb/modules/q1_steamlink_usb/disable",
-          "off": "touch /data/adb/modules/q1_steamlink_usb/disable",
-          "hint": "Wireless streaming works without it"
-        },
-        {
           "type": "button",
           "label": "Cable link",
           "on": "Check",
@@ -1109,13 +1102,6 @@
       "install": "Not installed: flash 03-devsettings-selinux-rN.zip in Magisk, then restart.",
       "controls": [
         {
-          "type": "switch",
-          "label": "Fix on",
-          "state": "^module=on$",
-          "on": "rm -f /data/adb/modules/quest1_devsettings_fix/disable",
-          "off": "touch /data/adb/modules/quest1_devsettings_fix/disable"
-        },
-        {
           "type": "button",
           "label": "Developer options",
           "on": "Open",
@@ -1125,6 +1111,7 @@
     },
     {
       "id": "boot-logo",
+      "module": "quest1_boot_logo",
       "name": "Boot logo",
       "area": "System fixes",
       "summary": "Fix 05: your own logo, picked at random each boot, in the boot animation instead of the Meta logo. The first ~2 s Meta logo is in signed firmware and can't change.",
@@ -1136,13 +1123,6 @@
       "check": "m=/data/adb/modules/quest1_boot_logo; [ -d $m ] || exit 3; if [ -f $m/disable ]; then echo module=off; else echo module=on; fi; echo \"logos=$(ls /data/adb/modules/quest1_boot_logo/logos 2>/dev/null | grep -c '\\.png$')\"",
       "install": "Not installed: put your logos in fixes/05-boot-logo/module/logos and flash the zip in Magisk.",
       "controls": [
-        {
-          "type": "switch",
-          "label": "Custom boot logo",
-          "state": "^module=on$",
-          "on": "rm -f /data/adb/modules/quest1_boot_logo/disable",
-          "off": "touch /data/adb/modules/quest1_boot_logo/disable"
-        },
         {
           "type": "button",
           "label": "Pick another logo for the next boot",
