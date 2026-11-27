@@ -51,26 +51,25 @@ else. To pin an Unknown Sources app to the dock, use the three dots on its tile.
 
 **Uninstalling**
 
-Our hooks let the dock hold up to 10 pins and keep sideloaded apps pinned.
-SystemUX saves that pin list, and stock SystemUX (5 pins, no sideloads) may
-not open the dock or apps menu with it once the hooks are gone. So, in order:
+Our hooks let the dock hold up to 10 pins (no Store/Explore) and keep
+sideloaded apps pinned, and SystemUX saves that pin list. Stock SystemUX reads
+the whole saved list back and adds Store and Explore, so after an uninstall
+the dock can overflow. So, in order:
 
-1. Unpin sideloaded (Unknown Sources) apps and get down to 5 pins (set Dock
-   pins to 5 in QuestEnhancer > QuestEnhancer hooks).
-2. In QuestEnhancer > QuestEnhancer, tap **Remove everything**. It removes the
-   modules the Manager installed and its settings, and asks before undoing OS
+1. In QuestEnhancer > QuestEnhancer, tap **Remove everything**. It removes the
+   modules the Manager installed and its settings, puts the dock back to 5
+   pins (the first 5 stay; SystemUX restarts), and asks before undoing OS
    update blocking, Chats or the adb port (left as they are by default).
-3. In Vector > Modules, turn QuestEnhancer off, then restart the headset.
-4. Check the dock and apps menu open, then uninstall QuestEnhancer.
+2. In Vector > Modules, turn QuestEnhancer off, then restart the headset.
+3. Check the dock and apps menu open, then uninstall QuestEnhancer.
 
-If you uninstall without step 2, the cleanup module
+If you uninstall without step 1, the cleanup module
 ([15-qe-cleanup](fixes/15-qe-cleanup)) removes those modules and settings at
-the next boot instead. It can't fix the dock, so step 1 still matters.
+the next boot instead. It can't shorten the dock (that needs the hooks).
 
 If the apps menu already won't open after an uninstall, installing
-QuestEnhancer again and enabling it in Vector should bring the hooks back so
-the saved dock loads, then do the steps above. (Not tested yet; a factory
-reset is the known fix.)
+QuestEnhancer again and enabling it in Vector should bring the hooks back,
+then do the steps above. (Not tested yet; a factory reset is the known fix.)
 
 **Known problems**
 

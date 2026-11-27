@@ -90,6 +90,23 @@ object DockLibraryHooks {
             }
         })
 
+        // At SystemUX start the saved pins are read in full (stock caps only when saving).
+        // Over the cap (the Dock pins slider was lowered): keep the first ones that fit,
+        // unpin the rest, and save the shorter list.
+        XposedHelpers.findAndHookMethod(vmClass, "initializePinnedApps", object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                @Suppress("UNCHECKED_CAST")
+                val pinned = XposedHelpers.callMethod(param.thisObject, "getPinnedApps") as LinkedHashMap<String, Any?>
+                if (pinned.size <= maxPinned) return
+                val kept = LinkedHashMap<String, Any?>()
+                for ((pkg, item) in pinned) if (kept.size < maxPinned) kept[pkg] = item
+                XposedHelpers.callMethod(param.thisObject, "setPinnedApps", kept)
+                XposedHelpers.callMethod(param.thisObject, "writeAppListPrefValue",
+                    ArrayList(kept.keys), PINNED_PREF_KEY, maxPinned)
+                XposedBridge.log("$TAG: ${pinned.size} pins over the cap of $maxPinned, unpinned ${pinned.keys - kept.keys}")
+            }
+        })
+
         // The saved list is cut to the cap passed here (5).
         XposedHelpers.findAndHookMethod(
             vmClass, "writeAppListPrefValue",

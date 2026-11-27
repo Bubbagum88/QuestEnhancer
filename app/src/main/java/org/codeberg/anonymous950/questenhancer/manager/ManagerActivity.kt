@@ -469,7 +469,7 @@ class ManagerActivity : Activity() {
                 val msg = buildString {
                     append(if (names.isEmpty()) "No modules installed by QuestEnhancer." else "Modules removed at the next restart: ${names.joinToString(", ")}.")
                     append(if (props.isEmpty()) "" else "\n\nQuestEnhancer settings cleared: ${props.joinToString(", ")}.")
-                    append("\n\nThe dock: unpin sideloaded apps and get down to 5 pins yourself first; the app can't change SystemUX's saved dock.")
+                    append("\n\nThe dock goes back to 5 pins (SystemUX restarts; the first 5 stay pinned).")
                 }
                 val labels = keep.map { (t, c) -> "Undo: ${t.name} (${c.label})" }.toTypedArray()
                 val ticked = BooleanArray(labels.size)
@@ -499,7 +499,9 @@ class ManagerActivity : Activity() {
                 props.map { "resetprop -p --delete $it" } +
                 undo +
                 listOf("rm -f $TRACKED", "true")).joinToString("; ")
-            val r = RootShell.run(cmd, timeoutSeconds = 60)
+            // Dock back to stock's 5: the hooks trim the saved pins as SystemUX starts again.
+            preferences.edit(commit = true) { putInt("dock_max_pins", 5) }
+            val r = RootShell.run("$cmd; am force-stop com.oculus.systemux", timeoutSeconds = 60)
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
                 if (r.code != 0) Toast.makeText(this, r.output.ifEmpty { "failed (exit ${r.code})" }, Toast.LENGTH_LONG).show()

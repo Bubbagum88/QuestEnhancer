@@ -17,7 +17,7 @@ Left alone on purpose: OS update blocking, Chats disabled, the adb port, and
 modules you flashed yourself. Those are your choices; the Manager's "Remove
 everything" asks about them.
 
-The dock's saved pins are not touched (they are in SystemUX's own data); see
-the README's Uninstalling section.
+The dock's saved pins are not touched: shortening them needs the hooks, so the
+Manager's Remove everything does it (back to 5) before the uninstall.
 
 Status: not yet tested on a headset.
