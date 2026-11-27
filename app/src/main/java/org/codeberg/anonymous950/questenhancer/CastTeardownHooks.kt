@@ -326,5 +326,43 @@ object CastTeardownHooks {
                 }
             }).size
         log("Horizon stop-gate hooks: $n")
+        installCastStateResync(cl)
+    }
+
+    // Horizon re-decides "is casting" on every app switch (OVRMediaServiceManager.A0M).
+    // The lock screen (com.oculus.os.vrlockscreen), System UI or an empty package briefly
+    // in front while the headset sleeps/wakes make it false; turning it back on needs a
+    // foreground-app check that can lose the race, so the cast keeps streaming while the
+    // cast button (fed by Horizon's LOCAL_STREAM_STATE_UPDATE broadcast) says it stopped.
+    // After each switch: log the session state, and if a cast is live and not paused but
+    // the flag says off, set it back and re-send Horizon's own state broadcast (A0D).
+    private fun installCastStateResync(cl: ClassLoader) {
+        val mgr = XposedHelpers.findClassIfExists(
+            "com.oculus.horizon.service_media.OVRMediaServiceManager", cl)
+        if (mgr == null) { log("cast state resync: OVRMediaServiceManager not found"); return }
+        val hooks = XposedBridge.hookAllMethods(mgr, "A0M", object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                try {
+                    val m = param.args.getOrNull(0) ?: return
+                    synchronized(m) {
+                        val s = XposedHelpers.getObjectField(m, "mLivestreamingManager") ?: return
+                        val type = XposedHelpers.getObjectField(s, "mStreamingType")?.toString()
+                        val init = XposedHelpers.getBooleanField(s, "mIsInitialized")
+                        val paused = XposedHelpers.getBooleanField(s, "mIsPaused")
+                        val flag = XposedHelpers.getBooleanField(s, "mIsLivestreaming")
+                        val pkg = XposedHelpers.getObjectField(m, "mPackageName")
+                        log("app switch to $pkg: type=$type initialized=$init paused=$paused " +
+                            "casting=$flag allowCast=${param.args.getOrNull(2)}")
+                        if (type != "CAST" || !init || paused || flag || !enabled()) return
+                        log("cast still running but Horizon marked it stopped; re-sending cast state")
+                        XposedHelpers.setBooleanField(s, "mIsLivestreaming", true)
+                    }
+                    XposedHelpers.callStaticMethod(mgr, "A0D", m)
+                } catch (t: Throwable) {
+                    log("cast state resync failed: $t")
+                }
+            }
+        }).size
+        log("cast state resync hooks: $hooks")
     }
 }
