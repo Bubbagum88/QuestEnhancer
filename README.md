@@ -49,6 +49,22 @@ Most of what the hooks unlock shows up in Quest's own Settings (Experimental,
 Hand tracking, Developer); the QuestEnhancer app is the Manager for everything
 else. To pin an Unknown Sources app to the dock, use the three dots on its tile.
 
+**Uninstalling**
+
+Our hooks let the dock hold up to 10 pins and keep sideloaded apps pinned.
+SystemUX saves that pin list, and stock SystemUX (5 pins, no sideloads) may
+not open the dock or apps menu with it once the hooks are gone. So, in order:
+
+1. Unpin sideloaded (Unknown Sources) apps and get down to 5 pins (set Dock
+   pins to 5 in QuestEnhancer > QuestEnhancer hooks).
+2. In Vector > Modules, turn QuestEnhancer off, then restart the headset.
+3. Check the dock and apps menu open, then uninstall QuestEnhancer.
+
+If the apps menu already won't open after an uninstall, installing
+QuestEnhancer again and enabling it in Vector should bring the hooks back so
+the saved dock loads, then do the steps above. (Not tested yet; a factory
+reset is the known fix.)
+
 **Known problems**
 
 - UX Patcher (Lumince) hooks the same apps and stops QuestEnhancer working.

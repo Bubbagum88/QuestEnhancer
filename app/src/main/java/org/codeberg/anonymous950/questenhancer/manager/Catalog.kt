@@ -36,7 +36,7 @@ data class Bundled(val fix: String, val id: String, val version: String, val ver
 
 /** One setting of a tweak. Commands run as root; `{value}` is the chosen option's value. */
 data class Control(
-    /** "header" (a sub-heading), "switch", "choice" or "button". */
+    /** "header" (a sub-heading), "switch", "choice", "button" or "slider". */
     val type: String,
     val label: String,
     /** Smaller text under the label. */
@@ -55,6 +55,10 @@ data class Control(
     val confirmOff: String = "",
     val preference: String = "",
     val preferenceDefault: Boolean = false,
+    /** Slider: its range and the value used before it is first moved (an int preference). */
+    val min: Int = 0,
+    val max: Int = 0,
+    val valueDefault: Int = 0,
 )
 
 /** A choice's option. `swatch` draws a colour dot (for colour choices). */
@@ -112,6 +116,9 @@ object Catalog {
             confirmOff = c.optString("confirmOff", ""),
             preference = c.optString("preference", ""),
             preferenceDefault = c.optBoolean("preferenceDefault", false),
+            min = c.optInt("min", 0),
+            max = c.optInt("max", 0),
+            valueDefault = c.optInt("valueDefault", 0),
             state = regex(c.optString("state", "")),
             on = c.optString("on", ""),
             off = c.optString("off", ""),

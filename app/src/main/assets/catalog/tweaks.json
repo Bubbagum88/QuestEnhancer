@@ -1244,10 +1244,24 @@
           "preferenceDefault": false
         },
         {
+          "type": "slider",
+          "label": "Dock pins",
+          "hint": "How many apps the dock holds (Meta's is 5). Takes effect after Restart SystemUX. Lower it and the dock keeps only that many when it next saves its pins.",
+          "preference": "dock_max_pins",
+          "min": 5,
+          "max": 10,
+          "valueDefault": 10
+        },
+        {
           "type": "switch",
           "label": "Show debug bar in the dock",
           "preference": "enable_dock_debug_bar",
           "preferenceDefault": true
+        },
+        {
+          "type": "header",
+          "label": "Before you uninstall QuestEnhancer",
+          "hint": "Stock SystemUX holds 5 pins and drops sideloaded apps from the dock; a dock saved with more can stop the dock and apps menu opening once the hooks are gone. First unpin sideloaded apps and get down to 5 pins (Dock pins at 5), then turn the module off in Vector, restart, and uninstall."
         }
       ]
     },

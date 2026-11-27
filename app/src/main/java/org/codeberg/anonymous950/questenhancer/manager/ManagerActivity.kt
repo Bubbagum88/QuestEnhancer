@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -229,6 +230,34 @@ class ManagerActivity : Activity() {
                 background = rounded(accent)
                 setOnClickListener { confirmThen(c.confirm) { act(t, c.run, showOutput = true) } }
             })
+            "slider" -> {
+                // Saved for the hooks when let go; SystemUX reads it when it starts.
+                val now = preferences.getInt(c.preference, c.valueDefault).coerceIn(c.min, c.max)
+                val value = label(now.toString(), 15f, Color.WHITE, bold = true)
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(8), 0, 0)
+                }
+                row.addView(SeekBar(this).apply {
+                    max = c.max - c.min
+                    progress = now - c.min
+                    setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                        override fun onProgressChanged(bar: SeekBar, p: Int, fromUser: Boolean) {
+                            value.text = (c.min + p).toString()
+                        }
+                        override fun onStartTrackingTouch(bar: SeekBar) {}
+                        override fun onStopTrackingTouch(bar: SeekBar) {
+                            preferences.edit(commit = true) { putInt(c.preference, c.min + bar.progress) }
+                            act(t, "")
+                            drawContent()
+                        }
+                    })
+                }, LinearLayout.LayoutParams(dp(360), LinearLayout.LayoutParams.WRAP_CONTENT))
+                row.addView(value, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT).apply { leftMargin = dp(12) })
+                box.addView(row)
+            }
             "choice" -> {
                 val current = c.state?.find(output)?.groupValues?.getOrNull(1)
                 val chips = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }

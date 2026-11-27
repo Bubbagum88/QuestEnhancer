@@ -545,7 +545,10 @@ class MainHook : IXposedHookLoadPackage {
         )
 
         // dock: 10 pins, no default pins; Library without a Meta account
-        DockLibraryHooks.install(lpparam.classLoader)
+        DockLibraryHooks.install(
+            lpparam.classLoader,
+            preferences.getInt("dock_max_pins", DockLibraryHooks.MOST_PINNED)
+        )
         LibraryTileHooks.install(lpparam.classLoader)
     }
 
