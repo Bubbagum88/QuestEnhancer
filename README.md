@@ -57,8 +57,15 @@ not open the dock or apps menu with it once the hooks are gone. So, in order:
 
 1. Unpin sideloaded (Unknown Sources) apps and get down to 5 pins (set Dock
    pins to 5 in QuestEnhancer > QuestEnhancer hooks).
-2. In Vector > Modules, turn QuestEnhancer off, then restart the headset.
-3. Check the dock and apps menu open, then uninstall QuestEnhancer.
+2. In QuestEnhancer > QuestEnhancer, tap **Remove everything**. It removes the
+   modules the Manager installed and its settings, and asks before undoing OS
+   update blocking, Chats or the adb port (left as they are by default).
+3. In Vector > Modules, turn QuestEnhancer off, then restart the headset.
+4. Check the dock and apps menu open, then uninstall QuestEnhancer.
+
+If you uninstall without step 2, the cleanup module
+([15-qe-cleanup](fixes/15-qe-cleanup)) removes those modules and settings at
+the next boot instead. It can't fix the dock, so step 1 still matters.
 
 If the apps menu already won't open after an uninstall, installing
 QuestEnhancer again and enabling it in Vector should bring the hooks back so

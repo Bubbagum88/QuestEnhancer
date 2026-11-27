@@ -1261,7 +1261,7 @@
         {
           "type": "header",
           "label": "Before you uninstall QuestEnhancer",
-          "hint": "Stock SystemUX holds 5 pins and drops sideloaded apps from the dock; a dock saved with more can stop the dock and apps menu opening once the hooks are gone. First unpin sideloaded apps and get down to 5 pins (Dock pins at 5), then turn the module off in Vector, restart, and uninstall."
+          "hint": "Stock SystemUX holds 5 pins and drops sideloaded apps from the dock; a dock saved with more can stop the dock and apps menu opening once the hooks are gone. First unpin sideloaded apps and get down to 5 pins (Dock pins at 5), tap Remove everything below, then turn the module off in Vector, restart, and uninstall."
         }
       ]
     },
