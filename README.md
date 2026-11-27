@@ -84,6 +84,7 @@ Each fix has its own folder with:
 | [12-backlight](fixes/12-backlight) | Holds the display brightness at a chosen value while the display is on | Our own, after a Discord tip; PC-tested, not yet on headset |
 | [13-wired-steamlink](fixes/13-wired-steamlink) | Steam Link over the USB cable (USB networking), with the patched Steam Link | misteranderson91's q1_steamlink_usb (MIT), unchanged; not yet on headset |
 | [14-skip-setup](fixes/14-skip-setup) | Skips first-time setup on a freshly reset rooted headset (script) | Juspertinry's method; not yet tested by us |
+| [15-qe-cleanup](fixes/15-qe-cleanup) | If QuestEnhancer is uninstalled, removes the modules its Manager installed and its settings at the next boot | Our own; tested on a PC with fake folders, not yet on headset |
 
 ## Apps
 

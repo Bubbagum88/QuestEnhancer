@@ -1,0 +1,6 @@
+id=qe_cleanup
+name=QuestEnhancer cleanup
+version=1.0
+versionCode=1
+author=Bubbagum88
+description=Installed by the QuestEnhancer Manager. If QuestEnhancer is uninstalled, removes the modules it installed and its settings at the next boot, then removes itself.

@@ -113,6 +113,7 @@ class ManagerActivity : Activity() {
         if (rebootNeeded) content.addView(rebootRow())
         if (systemUxRestartNeeded) content.addView(restartSystemUxRow())
         for (t in tweaks.filter { it.area == area }) content.addView(row(t))
+        if (area == "QuestEnhancer" && !loading && !RootShell.isRefused) content.addView(removeAllRow())
     }
 
     private fun row(t: Tweak): View {
@@ -340,19 +341,13 @@ class ManagerActivity : Activity() {
     /** Copies the bundled zip out of the APK and hands it to Magisk, then reads the state again. */
     private fun install(t: Tweak, b: Bundled) {
         Thread {
-            val zip = java.io.File(cacheDir, "${b.fix}.zip")
             // Magisk's installer clears "disable": a module that was off stays off.
             val wasOff = installed[t.id]?.off == true
-            val r = try {
-                assets.open("modules/${b.fix}.zip").use { i -> zip.outputStream().use { i.copyTo(it) } }
-                zip.setReadable(true, false)
-                RootShell.run("magisk --install-module '${zip.absolutePath}'", timeoutSeconds = 180)
-            } catch (e: Exception) {
-                RootShell.Result(-1, "couldn't copy the module: ${e.message}")
-            } finally {
-                zip.delete()
+            val r = installZip(b)
+            if (r.code == 0) {
+                if (wasOff) RootShell.run("touch /data/adb/modules/${b.id}/disable")
+                track(b.id)
             }
-            if (r.code == 0 && wasOff) RootShell.run("touch /data/adb/modules/${b.id}/disable")
             val v = installedVersion(b.id)
             val s = RootShell.run(t.check)
             runOnUiThread {
@@ -364,6 +359,127 @@ class ManagerActivity : Activity() {
                     Toast.makeText(this, r.output.lines().takeLast(4).joinToString("\n").ifEmpty { "install failed (exit ${r.code})" }, Toast.LENGTH_LONG).show()
                 } else rebootNeeded = true
                 drawContent()
+            }
+        }.start()
+    }
+
+    /** Copies a bundled zip out of the APK and hands it to Magisk. */
+    private fun installZip(b: Bundled): RootShell.Result {
+        val zip = java.io.File(cacheDir, "${b.fix}.zip")
+        return try {
+            assets.open("modules/${b.fix}.zip").use { i -> zip.outputStream().use { i.copyTo(it) } }
+            zip.setReadable(true, false)
+            RootShell.run("magisk --install-module '${zip.absolutePath}'", timeoutSeconds = 180)
+        } catch (e: Exception) {
+            RootShell.Result(-1, "couldn't copy the module: ${e.message}")
+        } finally {
+            zip.delete()
+        }
+    }
+
+    /**
+     * Notes a module the Manager installed in [TRACKED], and makes sure the cleanup
+     * module is on the headset: it removes the noted modules if this app is uninstalled
+     * (fixes/15-qe-cleanup). Runs on the background thread.
+     */
+    private fun track(id: String) {
+        if (id == CLEANUP_ID) return
+        RootShell.run("mkdir -p ${TRACKED.substringBeforeLast('/')}; " +
+            "grep -qx '$id' $TRACKED 2>/dev/null || echo '$id' >> $TRACKED")
+        val cleanup = bundled.values.firstOrNull { it.id == CLEANUP_ID } ?: return
+        val have = installedVersion(CLEANUP_ID)
+        if (have == null || have.removing || have.versionCode < cleanup.versionCode) {
+            RootShell.run("rm -f /data/adb/modules/$CLEANUP_ID/remove")
+            installZip(cleanup)
+        }
+    }
+
+    /**
+     * "Remove everything": the modules this Manager installed and its persist.qe.* props,
+     * so nothing it added keeps running once the app is uninstalled. OS update blocking,
+     * Chats and the adb port are only undone if ticked (they protect the headset).
+     */
+    private fun removeAllRow() = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(20), dp(14), dp(20), dp(14))
+        background = rounded(panel)
+        addView(LinearLayout(this@ManagerActivity).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(label("Remove everything", 15f, Color.WHITE))
+            addView(label("Before uninstalling QuestEnhancer: removes the modules it installed and its " +
+                "settings. If you just uninstall, the cleanup module does this at the next boot.", 12f, dim))
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        addView(label("Remove", 14f, Color.WHITE, bold = true).apply {
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+            background = rounded(accent)
+            setOnClickListener { removeAll() }
+        })
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(12)
+        }
+    }
+
+    private fun removeAll() {
+        Thread {
+            val mods = RootShell.run("[ -f $TRACKED ] && while read -r m; do " +
+                "[ -d /data/adb/modules/\$m ] || [ -d /data/adb/modules_update/\$m ] && echo \$m; done < $TRACKED; true")
+                .output.lines().map { it.trim() }.filter { it.isNotEmpty() && it != CLEANUP_ID }
+            val props = RootShell.run("getprop | sed -n 's/^\\[\\(persist\\.qe\\.[^]]*\\)\\].*/\\1/p'")
+                .output.lines().map { it.trim() }.filter { it.isNotEmpty() }
+            // The headset-protecting switches that are on now, from their own checks.
+            val keep = listOf("os-updates", "chats", "adb-port").mapNotNull { id ->
+                val t = tweaks.firstOrNull { it.id == id } ?: return@mapNotNull null
+                val c = t.controls.firstOrNull { it.type == "switch" && it.off.isNotEmpty() } ?: return@mapNotNull null
+                val out = RootShell.run(t.check)
+                if (out.code == 0 && c.state?.containsMatchIn(out.output) == true) t to c else null
+            }
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                val names = mods.map { id -> tweaks.firstOrNull { moduleId(it) == id }?.name ?: id }
+                val msg = buildString {
+                    append(if (names.isEmpty()) "No modules installed by QuestEnhancer." else "Modules removed at the next restart: ${names.joinToString(", ")}.")
+                    append(if (props.isEmpty()) "" else "\n\nQuestEnhancer settings cleared: ${props.joinToString(", ")}.")
+                    append("\n\nThe dock: unpin sideloaded apps and get down to 5 pins yourself first; the app can't change SystemUX's saved dock.")
+                }
+                val labels = keep.map { (t, c) -> "Undo: ${t.name} (${c.label})" }.toTypedArray()
+                val ticked = BooleanArray(labels.size)
+                AlertDialog.Builder(this)
+                    .setTitle("Remove everything?")
+                    .setMessage(msg + if (labels.isEmpty()) "" else "\n\nThese stay as they are unless ticked (on the next screen).")
+                    .setPositiveButton("Next") { _, _ ->
+                        if (labels.isEmpty()) runRemoveAll(mods, props, emptyList())
+                        else AlertDialog.Builder(this)
+                            .setTitle("Also undo? (usually not)")
+                            .setMultiChoiceItems(labels, ticked) { _, i, on -> ticked[i] = on }
+                            .setPositiveButton("Remove") { _, _ ->
+                                runRemoveAll(mods, props, keep.filterIndexed { i, _ -> ticked[i] }.map { it.second.off })
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+        }.start()
+    }
+
+    private fun runRemoveAll(mods: List<String>, props: List<String>, undo: List<String>) {
+        Thread {
+            val cmd = (mods.map { "rm -rf /data/adb/modules_update/$it; [ -d /data/adb/modules/$it ] && touch /data/adb/modules/$it/remove" } +
+                props.map { "resetprop -p --delete $it" } +
+                undo +
+                listOf("rm -f $TRACKED", "true")).joinToString("; ")
+            val r = RootShell.run(cmd, timeoutSeconds = 60)
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                if (r.code != 0) Toast.makeText(this, r.output.ifEmpty { "failed (exit ${r.code})" }, Toast.LENGTH_LONG).show()
+                else AlertDialog.Builder(this)
+                    .setMessage("Done. Restart the headset, then uninstall QuestEnhancer (and turn it off in Vector first).")
+                    .setPositiveButton("OK", null)
+                    .show()
+                rebootNeeded = true
+                refresh(retryRoot = false)
             }
         }.start()
     }
@@ -575,6 +691,10 @@ class ManagerActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 }
+
+/** Modules this Manager installed, one id a line; read by the cleanup module. */
+private const val TRACKED = "/data/adb/questenhancer/installed"
+private const val CLEANUP_ID = "qe_cleanup"
 
 /**
  * A module on the headset. [pending]: installed, waiting for a restart. [off]: its disable
