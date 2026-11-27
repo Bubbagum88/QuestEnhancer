@@ -36,6 +36,9 @@ class ManagerActivity : Activity() {
     private var bundled: Map<String, Bundled> = emptyMap()
     /** Module tweaks: the module's state on the headset; absent = not installed. */
     private val installed = mutableMapOf<String, Installed>()
+    /** Module ids the Manager installed ([TRACKED]) and those to keep after an uninstall ([KEPT]). */
+    private var tracked: Set<String> = emptySet()
+    private var kept: Set<String> = emptySet()
     private lateinit var nav: LinearLayout
     private lateinit var content: LinearLayout
     private var area = ""
@@ -339,6 +342,13 @@ class ManagerActivity : Activity() {
                         install(t, b)
                     }
                 }
+                if (id in tracked) {
+                    box.addView(label("Keep after uninstall", 13f, dim).apply { setPadding(dp(12), 0, 0, 0) })
+                    box.addView(Switch(this).apply {
+                        isChecked = id in kept
+                        setOnCheckedChangeListener { _, on -> setKept(t, id, on) }
+                    })
+                }
                 button("Uninstall") {
                     confirmThen("Uninstall ${t.name}? Magisk removes it at the next restart.") {
                         // A pending install would replace the old folder (and its remove flag) at boot: drop it too.
@@ -354,6 +364,7 @@ class ManagerActivity : Activity() {
     private fun moduleCommand(t: Tweak, command: String) {
         Thread {
             val r = RootShell.run(command)
+            readTracked()
             val v = installedVersion(moduleId(t))
             val s = RootShell.run(t.check)
             runOnUiThread {
@@ -413,14 +424,24 @@ class ManagerActivity : Activity() {
      */
     private fun track(id: String) {
         if (id == CLEANUP_ID) return
-        RootShell.run("mkdir -p ${TRACKED.substringBeforeLast('/')}; " +
-            "grep -qx '$id' $TRACKED 2>/dev/null || echo '$id' >> $TRACKED")
+        RootShell.run("mkdir -p $QE_DIR; grep -qx '$id' $TRACKED 2>/dev/null || echo '$id' >> $TRACKED")
+        ensureCleanup()
+    }
+
+    /** Installs (or updates) the cleanup module if it isn't current. Background thread. */
+    private fun ensureCleanup() {
         val cleanup = bundled.values.firstOrNull { it.id == CLEANUP_ID } ?: return
         val have = installedVersion(CLEANUP_ID)
         if (have == null || have.removing || have.versionCode < cleanup.versionCode) {
             RootShell.run("rm -f /data/adb/modules/$CLEANUP_ID/remove")
             installZip(cleanup)
         }
+    }
+
+    /** Keep a module if QuestEnhancer is uninstalled (the cleanup module skips it), or not. */
+    private fun setKept(t: Tweak, id: String, keep: Boolean) {
+        moduleCommand(t, if (keep) "mkdir -p $QE_DIR; grep -qx '$id' $KEPT 2>/dev/null || echo '$id' >> $KEPT"
+            else "[ -f $KEPT ] && sed -i '/^$id\$/d' $KEPT; true")
     }
 
     /**
@@ -453,7 +474,7 @@ class ManagerActivity : Activity() {
         Thread {
             val mods = RootShell.run("[ -f $TRACKED ] && while read -r m; do " +
                 "[ -d /data/adb/modules/\$m ] || [ -d /data/adb/modules_update/\$m ] && echo \$m; done < $TRACKED; true")
-                .output.lines().map { it.trim() }.filter { it.isNotEmpty() && it != CLEANUP_ID }
+                .output.lines().map { it.trim() }.filter { it.isNotEmpty() && it != CLEANUP_ID && it !in kept }
             val props = RootShell.run("getprop | sed -n 's/^\\[\\(persist\\.qe\\.[^]]*\\)\\].*/\\1/p'")
                 .output.lines().map { it.trim() }.filter { it.isNotEmpty() }
             // The headset-protecting switches that are on now, from their own checks.
@@ -468,6 +489,7 @@ class ManagerActivity : Activity() {
                 val names = mods.map { id -> tweaks.firstOrNull { moduleId(it) == id }?.name ?: id }
                 val msg = buildString {
                     append(if (names.isEmpty()) "No modules installed by QuestEnhancer." else "Modules removed at the next restart: ${names.joinToString(", ")}.")
+                    if (kept.isNotEmpty()) append("\n\nKept (you chose Keep after uninstall): ${kept.joinToString(", ")}.")
                     append(if (props.isEmpty()) "" else "\n\nQuestEnhancer settings cleared: ${props.joinToString(", ")}.")
                     append("\n\nThe dock goes back to 5 pins (SystemUX restarts; the first 5 stay pinned).")
                 }
@@ -593,6 +615,8 @@ class ManagerActivity : Activity() {
         Thread {
             // Changes get longer than checks: ptcolor rewrites part of an APK copy.
             val r = RootShell.run(command, timeoutSeconds = 180)
+            // A persist.qe.* prop outlives the app: the cleanup module clears it after an uninstall.
+            if (r.code == 0 && "persist.qe." in command) ensureCleanup()
             val s = RootShell.run(t.check)
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
@@ -682,6 +706,13 @@ class ManagerActivity : Activity() {
     }
 
     /** All checks on one background thread through the one root shell. */
+    /** Reads [TRACKED] and [KEPT]. Background thread. */
+    private fun readTracked() {
+        fun ids(f: String) = RootShell.run("cat $f 2>/dev/null; true").output.lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        tracked = ids(TRACKED)
+        kept = ids(KEPT)
+    }
+
     private fun refresh(retryRoot: Boolean) {
         if (loading) return
         loading = true
@@ -689,6 +720,7 @@ class ManagerActivity : Activity() {
         drawContent()
         Thread {
             if (retryRoot) RootShell.retry()
+            readTracked()
             for (t in tweaks) {
                 val v = moduleId(t).takeIf { it.isNotEmpty() }?.let { installedVersion(it) }
                 val r = if (t.check.isBlank()) {
@@ -724,7 +756,10 @@ class ManagerActivity : Activity() {
 }
 
 /** Modules this Manager installed, one id a line; read by the cleanup module. */
-private const val TRACKED = "/data/adb/questenhancer/installed"
+private const val QE_DIR = "/data/adb/questenhancer"
+private const val TRACKED = "$QE_DIR/installed"
+/** Modules to keep if QuestEnhancer is uninstalled, one id a line; read by the cleanup module. */
+private const val KEPT = "$QE_DIR/keep"
 private const val CLEANUP_ID = "qe_cleanup"
 
 /**

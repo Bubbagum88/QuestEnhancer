@@ -1254,6 +1254,13 @@
         },
         {
           "type": "switch",
+          "label": "Hand tracking flags",
+          "hint": "Turns on Meta's hand 2.0 override, hands as controllers and double-tap switching. Turn off if hand tracking misbehaves or with Bluedragon's hand tracking modules.",
+          "preference": "hand_tracking_flags",
+          "preferenceDefault": true
+        },
+        {
+          "type": "switch",
           "label": "Show debug bar in the dock",
           "preference": "enable_dock_debug_bar",
           "preferenceDefault": true
@@ -1261,7 +1268,7 @@
         {
           "type": "header",
           "label": "Before you uninstall QuestEnhancer",
-          "hint": "Stock SystemUX holds 5 pins and drops sideloaded apps from the dock; a dock saved with more can stop the dock and apps menu opening once the hooks are gone. Tap Remove everything below (it also puts the dock back to 5 pins), then turn the module off in Vector, restart, and uninstall."
+          "hint": "Stock SystemUX reloads every saved pin and adds Store and Explore back, so a long dock overflows once the hooks are gone. Tap Remove everything below (it also puts the dock back to 5 pins), then turn the module off in Vector, restart, and uninstall."
         }
       ]
     },

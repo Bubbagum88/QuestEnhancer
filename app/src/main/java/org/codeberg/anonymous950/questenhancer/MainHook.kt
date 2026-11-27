@@ -77,7 +77,10 @@ class MainHook : IXposedHookLoadPackage {
         val REMOVE = XposedHelpers.getStaticObjectField(menuEnum, "REMOVE")
 
         val deviceConfigOverride = DeviceConfigOverride()
-        deviceConfigOverride.putAll(SYSTEMUX_SETTINGS_PAGES.associateWith {
+        // The hand tracking flags may change how SystemUX runs hand tracking, not only
+        // show settings; the Manager's "Hand tracking flags" switch leaves them to Meta.
+        val handFlags = preferences.getBoolean("hand_tracking_flags", true)
+        deviceConfigOverride.putAll(SYSTEMUX_SETTINGS_PAGES.filter { handFlags || it !in HAND_TRACKING_FLAGS }.associateWith {
             DeviceConfigValue.Boolean(
                 true
             )
@@ -559,6 +562,12 @@ class MainHook : IXposedHookLoadPackage {
 
         // settings options to enable, including secret settings
         // you can always turn them off so just enable everything
+        private val HAND_TRACKING_FLAGS = setOf(
+            "oculus_systemux:oculus_mobile_hand2_override",
+            "oculus_systemux:oculus_mobile_enable_hand_emulation_of_controllers",
+            "oculus_systemux:oculus_mobile_double_tap_hand_autotransition",
+        )
+
         private val SYSTEMUX_SETTINGS_PAGES = setOf(
             "oculus_systemux:oculus_developer", // developer mode, important
             "oculus_systemux:oculus_mobile_settings_app_library_section",
