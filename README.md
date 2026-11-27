@@ -64,8 +64,11 @@ the dock can overflow. So, in order:
 3. Check the dock and apps menu open, then uninstall QuestEnhancer.
 
 If you uninstall without step 1, the cleanup module
-([15-qe-cleanup](fixes/15-qe-cleanup)) removes those modules and settings at
-the next boot instead. It can't shorten the dock (that needs the hooks).
+([15-qe-cleanup](fixes/15-qe-cleanup)) does the same at the next boot: it
+stops and removes those modules, deletes their leftover files and
+QuestEnhancer's settings, then removes itself, so nothing is left running. It
+can't shorten the dock (that needs the hooks). A module you switch to **Keep
+after uninstall** in the Manager is left installed, as a normal Magisk module.
 
 If the apps menu already won't open after an uninstall, installing
 QuestEnhancer again and enabling it in Vector should bring the hooks back,
@@ -106,7 +109,7 @@ Each fix has its own folder with:
 | [12-backlight](fixes/12-backlight) | Holds the display brightness at a chosen value while the display is on | Our own, after a Discord tip; PC-tested, not yet on headset |
 | [13-wired-steamlink](fixes/13-wired-steamlink) | Steam Link over the USB cable (USB networking), with the patched Steam Link | misteranderson91's q1_steamlink_usb (MIT), unchanged; not yet on headset |
 | [14-skip-setup](fixes/14-skip-setup) | Skips first-time setup on a freshly reset rooted headset (script) | Juspertinry's method; not yet tested by us |
-| [15-qe-cleanup](fixes/15-qe-cleanup) | If QuestEnhancer is uninstalled, removes the modules its Manager installed and its settings at the next boot | Our own; tested on a PC with fake folders, not yet on headset |
+| [15-qe-cleanup](fixes/15-qe-cleanup) | If QuestEnhancer is uninstalled, removes the modules its Manager installed and its settings at the next boot | Our own; its test (fake headset) passes in CI, not yet on headset |
 
 ## Apps
 

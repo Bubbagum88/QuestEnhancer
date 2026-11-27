@@ -76,6 +76,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
+      - name: Test the cleanup module (fake headset)
+        run: sh fixes/15-qe-cleanup/test/run.sh
       - name: Build Developer Options app
         working-directory: apps/devoptions
         run: gradle --no-daemon :app:assembleDebug
