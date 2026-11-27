@@ -1112,25 +1112,15 @@
     },
     {
       "id": "boot-logo",
-      "module": "quest1_boot_logo",
       "name": "Boot logo",
       "area": "System fixes",
-      "summary": "Fix 05: your own logo, picked at random each boot, in the boot animation instead of the Meta logo. The first ~2 s Meta logo is in signed firmware and can't change.",
+      "summary": "Fix 05: your own logo, picked at random each boot, in the boot animation instead of the Meta logo. Read only here: it is built with your own pictures (none are shipped), into the boot image or as a module. Warnings: rebuilding and flashing the boot image is a desk job, so keep a backup of your boot image and fastboot ready to flash it back if the headset won't start. Don't delete the quest1_boot_logo module or its logos folder: it is the source for the next rebuild. Reinstalling Magisk drops the logo until you rebuild. The first ~2 s Meta logo is in signed firmware and can't change.",
       "author": "Bubbagum88",
       "url": "https://github.com/Bubbagum88/QuestEnhancer/tree/main/fixes/05-boot-logo",
       "licence": "GPL-3.0",
       "risk": "reboot",
-      "after": "reboot",
-      "check": "m=/data/adb/modules/quest1_boot_logo; [ -d $m ] || exit 3; if [ -f $m/disable ]; then echo module=off; else echo module=on; fi; echo \"logos=$(ls /data/adb/modules/quest1_boot_logo/logos 2>/dev/null | grep -c '\\.png$')\"",
-      "install": "Not installed: put your logos in fixes/05-boot-logo/module/logos and flash the zip in Magisk.",
-      "controls": [
-        {
-          "type": "button",
-          "label": "Pick another logo for the next boot",
-          "on": "Pick",
-          "run": "sh /data/adb/modules/quest1_boot_logo/pick.sh"
-        }
-      ]
+      "check": "t=$(magisk --path 2>/dev/null); n=$(ls $t/q1logo_*.png 2>/dev/null | wc -l); if [ -f \"$t/q1pick.sh\" ]; then echo \"Boot image method: $n logos in the boot image\"; l=$(dmesg | grep -o \"q1logo: .*\" | tail -n 1); if [ -n \"$l\" ]; then b=${l##*/q1logo_}; echo \"This boot: ${b%.png}\"; else echo \"This boot: not in the kernel log any more\"; fi; elif [ -d /data/adb/modules/quest1_boot_logo ] && [ ! -f /data/adb/modules/quest1_boot_logo/disable ]; then echo \"Module method (shows after the first seconds of boot)\"; else exit 3; fi",
+      "install": "Not set up. See fix 05: you build it with your own logos."
     },
     {
       "id": "ui-sounds",
